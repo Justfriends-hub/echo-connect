@@ -1,0 +1,147 @@
+import React, { useState } from 'react';
+import { Search, Menu, Edit, Users, Megaphone, Settings } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { Chat } from '@/types/chat';
+import { cn } from '@/lib/utils';
+
+interface ChatSidebarProps {
+  chats: Chat[];
+  activeChat: string | null;
+  onSelectChat: (id: string) => void;
+  onNewChat: () => void;
+  onNewGroup: () => void;
+  onNewChannel: () => void;
+}
+
+export function ChatSidebar({ chats, activeChat, onSelectChat, onNewChat, onNewGroup, onNewChannel }: ChatSidebarProps) {
+  const [search, setSearch] = useState('');
+  const [showMenu, setShowMenu] = useState(false);
+
+  const filtered = chats.filter(c =>
+    (c.name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) {
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getChatIcon = (type: Chat['type']) => {
+    if (type === 'group') return <Users className="w-3 h-3 text-muted-foreground" />;
+    if (type === 'channel') return <Megaphone className="w-3 h-3 text-muted-foreground" />;
+    return null;
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border">
+      {/* Header */}
+      <div className="flex items-center gap-2 p-3 border-b border-sidebar-border">
+        <div className="relative">
+          <Button variant="ghost" size="icon" className="text-sidebar-foreground" onClick={() => setShowMenu(!showMenu)}>
+            <Menu className="w-5 h-5" />
+          </Button>
+          {showMenu && (
+            <div className="absolute top-full left-0 mt-1 w-52 bg-popover rounded-lg shadow-lg border border-border z-50 py-1 animate-fade-in">
+              <button onClick={() => { onNewGroup(); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors">
+                <Users className="w-4 h-4" /> New Group
+              </button>
+              <button onClick={() => { onNewChannel(); setShowMenu(false); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors">
+                <Megaphone className="w-4 h-4" /> New Channel
+              </button>
+              <button className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors">
+                <Settings className="w-4 h-4" /> Settings
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex-1 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 h-9 bg-sidebar-accent border-0 text-sidebar-foreground placeholder:text-muted-foreground rounded-full"
+          />
+        </div>
+      </div>
+
+      {/* Chat List */}
+      <ScrollArea className="flex-1">
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <p className="text-sm">No conversations yet</p>
+            <p className="text-xs mt-1">Start a new chat to begin</p>
+          </div>
+        ) : (
+          filtered.map(chat => (
+            <button
+              key={chat.id}
+              onClick={() => onSelectChat(chat.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left",
+                activeChat === chat.id ? "bg-sidebar-accent" : "hover:bg-sidebar-accent/50"
+              )}
+            >
+              <div className="relative">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={chat.avatar_url} />
+                  <AvatarFallback className="bg-primary/20 text-primary text-sm font-medium">
+                    {getInitials(chat.name || 'U')}
+                  </AvatarFallback>
+                </Avatar>
+                {chat.type === 'direct' && chat.is_online && (
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 online-dot rounded-full border-2 border-sidebar" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    {getChatIcon(chat.type)}
+                    <span className="font-medium text-sm text-sidebar-foreground truncate">
+                      {chat.name || 'Unknown'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                    {chat.last_message ? formatTime(chat.last_message.created_at) : ''}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mt-0.5">
+                  <p className="text-sm text-muted-foreground truncate pr-2">
+                    {chat.last_message?.content || 'No messages yet'}
+                  </p>
+                  {(chat.unread_count ?? 0) > 0 && (
+                    <span className="flex-shrink-0 min-w-[20px] h-5 flex items-center justify-center rounded-full bg-unread-badge text-xs font-medium text-primary-foreground px-1.5">
+                      {chat.unread_count}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))
+        )}
+      </ScrollArea>
+
+      {/* FAB */}
+      <div className="absolute bottom-6 right-6">
+        <Button
+          onClick={onNewChat}
+          size="icon"
+          className="w-14 h-14 rounded-full bg-primary hover:bg-primary/90 shadow-lg"
+        >
+          <Edit className="w-5 h-5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
