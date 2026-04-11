@@ -20,6 +20,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ chats, activeChat, onSelectChat, onNewChat, onNewGroup, onNewChannel }: ChatSidebarProps) {
   const [search, setSearch] = useState('');
   const [showMenu, setShowMenu] = useState(false);
+  const navigate = useNavigate();
 
   const filtered = chats.filter(c =>
     (c.name || '').toLowerCase().includes(search.toLowerCase())
