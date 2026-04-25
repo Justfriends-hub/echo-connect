@@ -70,16 +70,16 @@ export function ChatLayout() {
             currentChat.type === 'channel' ? (
               <ChannelView
                 chat={currentChat}
-                messages={currentMessages}
-                currentUserId="me"
+                messages={messages}
+                currentUserId={user?.id || ''}
                 onSendMessage={handleSendMessage}
                 onBack={() => setActiveChat(null)}
               />
             ) : (
               <ChatArea
                 chat={currentChat}
-                messages={currentMessages}
-                currentUserId="me"
+                messages={messages}
+                currentUserId={user?.id || ''}
                 onSendMessage={handleSendMessage}
                 onBack={() => setActiveChat(null)}
               />
