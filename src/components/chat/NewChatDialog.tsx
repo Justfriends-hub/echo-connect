@@ -24,7 +24,12 @@ export function NewChatDialog({ open, onClose, onChatCreated }: NewChatDialogPro
     if (!open) { setSearch(''); setResults([]); return; }
     const t = setTimeout(async () => {
       const term = search.trim();
-      let query = supabase.from('profiles').select('*').neq('id', user?.id || '').limit(20);
+      let query = supabase
+        .from('profiles')
+        .select('*')
+        .neq('id', user?.id || '')
+        .eq('is_bot', false)
+        .limit(20);
       if (term) {
         query = query.or(`username.ilike.%${term}%,display_name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`);
       }

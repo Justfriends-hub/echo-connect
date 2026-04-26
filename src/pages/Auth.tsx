@@ -6,14 +6,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
-  const [step, setStep] = useState<'identifier' | 'otp' | 'username'>('identifier');
+  const [step, setStep] = useState<'identifier' | 'username'>('identifier');
   const [identifier, setIdentifier] = useState('');
-  const [otp, setOtp] = useState('');
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signInWithIdentifier, verifyOtp, updateProfile } = useAuth();
+  const { signUp } = useAuth();
   const navigate = useNavigate();
 
   const validateEmail = (value: string) => {
@@ -28,7 +28,7 @@ export default function Auth() {
     return true;
   };
 
-  const handleSendOtp = async () => {
+  const handleContinue = async () => {
     setError('');
     const isEmail = identifier.includes('@');
     const digits = identifier.replace(/\D/g, '');
@@ -45,42 +45,10 @@ export default function Auth() {
       }
     }
 
-    setLoading(true);
-    const fullIdentifier = isEmail ? identifier : `+234${digits}`;
-    const { error } = await signInWithIdentifier(fullIdentifier);
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-    } else {
-      if (isEmail) {
-        navigate('/');
-      } else {
-        setStep('username');
-      }
-    }
+    setStep('username');
   };
 
-  const handleVerifyOtp = async () => {
-    setError('');
-    if (otp.length < 6) {
-      setError('Enter the 6-digit code');
-      return;
-    }
-    setLoading(true);
-    const digits = identifier.replace(/\D/g, '');
-    const isEmail = identifier.includes('@');
-    const fullIdentifier = isEmail ? identifier : `+234${digits}`;
-    const { error } = await verifyOtp(fullIdentifier, otp);
-    setLoading(false);
-    if (error) {
-      setError(error.message);
-    } else {
-      setStep('username');
-    }
-  };
-
-  const handleSetUsername = async () => {
+  const handleSignUp = async () => {
     setError('');
     if (username.length < 3) {
       setError('Username must be at least 3 characters');
@@ -90,18 +58,30 @@ export default function Auth() {
       setError('Please enter your name');
       return;
     }
-    setLoading(true);
-    try {
-      await updateProfile({
-        username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
-        display_name: displayName.trim(),
-        phone: identifier.includes('@') ? '' : `+234${identifier.replace(/\D/g, '')}`,
-      });
-      navigate('/');
-    } catch (e: any) {
-      setError(e.message || 'Failed to set profile');
+
+    const isEmail = identifier.includes('@');
+    const digits = identifier.replace(/\D/g, '');
+    const fullPhone = isEmail ? phone : `+234${digits}`;
+
+    if (!isEmail && (!phone || phone.replace(/\D/g, '').length < 10)) {
+      setError('Enter a valid phone number');
+      return;
     }
+
+    setLoading(true);
+    const { error } = await signUp(
+      identifier,
+      username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+      displayName.trim(),
+      fullPhone
+    );
     setLoading(false);
+
+    if (error) {
+      setError(error?.message || 'Sign up failed');
+    } else {
+      navigate('/');
+    }
   };
 
   return (
@@ -131,45 +111,22 @@ export default function Auth() {
               />
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
-            <Button onClick={handleSendOtp} className="w-full" disabled={loading}>
-              {loading ? 'Sending...' : 'Continue'}
+            <Button onClick={handleContinue} className="w-full" disabled={loading}>
+              {loading ? 'Continuing...' : 'Continue'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
-          </div>
-        )}
-
-        {/* OTP Step */}
-        {step === 'otp' && (
-          <div className="space-y-4 animate-fade-in">
-            <div>
-              <p className="text-sm text-foreground mb-1">We sent a code to</p>
-              <p className="text-sm text-primary font-medium">
-                {identifier.includes('@') ? identifier : `+234${identifier.replace(/\D/g, '')}`}
-              </p>
-            </div>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="Enter 6-digit code"
-              value={otp}
-              onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="text-center text-lg tracking-widest bg-secondary border-0"
-              autoFocus
-            />
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            <Button onClick={handleVerifyOtp} className="w-full" disabled={loading}>
-              {loading ? 'Verifying...' : 'Verify'}
-            </Button>
-            <button onClick={() => setStep('identifier')} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Change identifier
-            </button>
           </div>
         )}
 
         {/* Username Step */}
         {step === 'username' && (
           <div className="space-y-4 animate-fade-in">
-            <p className="text-sm text-foreground">Set up your profile</p>
+            <div>
+              <p className="text-sm text-foreground mb-2">Almost there! Set up your profile</p>
+              <p className="text-xs text-muted-foreground">
+                {identifier.includes('@') ? identifier : `+234${identifier.replace(/\D/g, '')}`}
+              </p>
+            </div>
             <div className="space-y-3">
               <Input
                 placeholder="Your name"
@@ -187,15 +144,28 @@ export default function Auth() {
                   className="pl-8 bg-secondary border-0"
                 />
               </div>
+              {!identifier.includes('@') && (
+                <Input
+                  type="tel"
+                  placeholder="Phone number"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className="bg-secondary border-0"
+                />
+              )}
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
-            <Button onClick={handleSetUsername} className="w-full" disabled={loading}>
-              {loading ? 'Setting up...' : 'Start Chatting'}
+            <Button onClick={handleSignUp} className="w-full" disabled={loading}>
+              {loading ? 'Creating account...' : 'Start Chatting'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
+            <button onClick={() => setStep('identifier')} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Use different email/phone
+            </button>
           </div>
         )}
       </div>
     </div>
   );
 }
+

@@ -8,8 +8,7 @@ interface AuthContextType {
   session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
-  signInWithIdentifier: (identifier: string) => Promise<{ error: any }>;
-  verifyOtp: (identifier: string, token: string) => Promise<{ error: any }>;
+  signUp: (identifier: string, username: string, displayName: string, phone: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
@@ -29,7 +28,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Fetch profile with setTimeout to avoid deadlock
           setTimeout(async () => {
             const { data } = await (supabase as any)
               .from('profiles')
@@ -55,53 +53,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithIdentifier = async (identifier: string) => {
+  const signUp = async (identifier: string, username: string, displayName: string, phone: string) => {
     const isEmail = identifier.includes('@');
-
-    if (isEmail) {
-      const password = `auto-${identifier.toLowerCase()}`;
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: identifier,
-        password,
-      });
-
-      if (!signInError) {
-        return { error: null };
-      }
-
-      if (signInError.message.includes('Invalid login credentials') || signInError.message.includes('User not found')) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: identifier,
-          password,
-        });
-        if (signUpError) return { error: signUpError };
-
-        const { error: signInAfterSignUpError } = await supabase.auth.signInWithPassword({
-          email: identifier,
-          password,
-        });
-        return { error: signInAfterSignUpError };
-      }
-
-      return { error: signInError };
-    }
-
-    const signInResult = await supabase.auth.signInWithOtp({ phone: identifier });
-    if (signInResult.error) return { error: signInResult.error };
-
-    const verifyResult = await supabase.auth.verifyOtp({ phone: identifier, token: '123456', type: 'sms' });
-    return { error: verifyResult.error };
-  };
-
-  const verifyOtp = async (identifier: string, token: string) => {
-    const isEmail = identifier.includes('@');
-    if (isEmail) {
-      const { error } = await supabase.auth.verifyOtp({ email: identifier, token, type: 'email' });
-      return { error };
-    }
-
-    const { error } = await supabase.auth.verifyOtp({ phone: identifier, token, type: 'sms' });
-    return { error };
+    const randomPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    
+    const { data, error } = await supabase.auth.signUp({
+      email: isEmail ? identifier : `${username.toLowerCase()}+${Math.random().toString(36).substring(7)}@temp.local`,
+      password: randomPassword,
+      options: {
+        data: {
+          username: username.toLowerCase(),
+          display_name: displayName,
+          phone: isEmail ? phone : identifier,
+        },
+      },
+    });
+    
+    return { data, error };
   };
 
   const signOut = async () => {
@@ -115,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signInWithIdentifier, verifyOtp, signOut, updateProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

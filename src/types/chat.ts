@@ -4,9 +4,11 @@ export interface UserProfile {
   id: string;
   username: string;
   display_name: string;
-  phone: string;
+  email?: string;
+  phone?: string;
   avatar_url?: string;
   bio?: string;
+  is_bot: boolean;
   hide_phone: boolean;
   is_online: boolean;
   last_seen: string;

@@ -1,5 +1,5 @@
 -- =====================================================================
--- Chirp Messenger — Portable Supabase setup
+-- Echo Connect — Complete Supabase Setup
 -- =====================================================================
 -- Run this once on a fresh Supabase project (SQL Editor) to recreate the
 -- entire schema, RLS policies, functions, triggers, and realtime config.
@@ -38,17 +38,39 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 -- ----------------------------- TABLES --------------------------------
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid PRIMARY KEY,
-  username text NOT NULL,
+  username text NOT NULL UNIQUE,
   display_name text NOT NULL,
-  phone text NOT NULL,
+  email text,
+  phone text,
   avatar_url text,
   bio text,
+  is_bot boolean NOT NULL DEFAULT false,
   hide_phone boolean NOT NULL DEFAULT false,
   is_online boolean NOT NULL DEFAULT false,
   last_seen timestamptz NOT NULL DEFAULT now(),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+DO $$ BEGIN
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email text;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_bot boolean DEFAULT false;
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+UPDATE public.profiles SET is_bot = false WHERE is_bot IS NULL;
+
+DO $$ BEGIN
+  ALTER TABLE public.profiles ALTER COLUMN is_bot SET NOT NULL;
+EXCEPTION WHEN undefined_column THEN NULL; END $$;
+
+-- Index for faster searches
+CREATE INDEX IF NOT EXISTS idx_profiles_username ON public.profiles(username);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+CREATE INDEX IF NOT EXISTS idx_profiles_phone ON public.profiles(phone);
+CREATE INDEX IF NOT EXISTS idx_profiles_is_bot ON public.profiles(is_bot);
 
 CREATE TABLE IF NOT EXISTS public.user_roles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -173,11 +195,20 @@ END; $$;
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, display_name, phone) VALUES (
+  INSERT INTO public.profiles (
+    id,
+    username,
+    display_name,
+    email,
+    phone,
+    is_bot
+  ) VALUES (
     NEW.id,
-    COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || LEFT(NEW.id::text,8)),
-    COALESCE(NEW.raw_user_meta_data->>'display_name','User'),
-    COALESCE(NEW.phone,'')
+    COALESCE(NEW.raw_user_meta_data->>'username', 'user_' || LEFT(NEW.id::text, 8)),
+    COALESCE(NEW.raw_user_meta_data->>'display_name', 'User'),
+    NEW.email,
+    COALESCE(NEW.phone, ''),
+    COALESCE((NEW.raw_user_meta_data->>'is_bot')::boolean, false)
   );
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'user');
   RETURN NEW;
@@ -185,10 +216,15 @@ END; $$;
 
 CREATE OR REPLACE FUNCTION public.get_or_create_direct_chat(_other_user uuid)
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$
-DECLARE _me uuid := auth.uid(); _chat_id uuid;
+DECLARE _me uuid := auth.uid(); _chat_id uuid; _other_is_bot boolean;
 BEGIN
   IF _me IS NULL THEN RAISE EXCEPTION 'Not authenticated'; END IF;
   IF _me = _other_user THEN RAISE EXCEPTION 'Cannot chat with yourself'; END IF;
+  
+  -- Check if the other user is a bot
+  SELECT is_bot INTO _other_is_bot FROM public.profiles WHERE id = _other_user;
+  IF _other_is_bot THEN RAISE EXCEPTION 'Cannot chat with bots'; END IF;
+
   SELECT c.id INTO _chat_id FROM public.chats c
     WHERE c.type='direct'
       AND EXISTS (SELECT 1 FROM public.chat_members m WHERE m.chat_id=c.id AND m.user_id=_me)
