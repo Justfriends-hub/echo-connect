@@ -56,19 +56,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (identifier: string, username: string, displayName: string, phone: string) => {
     const isEmail = identifier.includes('@');
     const randomPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    
+    const formattedPhone = identifier.startsWith('+') ? identifier : `+234${identifier.replace(/\D/g, '')}`;
+
+    if (isEmail) {
+      const { data, error } = await supabase.auth.signUp({
+        email: identifier,
+        password: randomPassword,
+        options: {
+          data: {
+            username: username.toLowerCase(),
+            display_name: displayName,
+            phone,
+          },
+        },
+      });
+      return { data, error };
+    }
+
     const { data, error } = await supabase.auth.signUp({
-      email: isEmail ? identifier : `${username.toLowerCase()}+${Math.random().toString(36).substring(7)}@temp.local`,
+      phone: formattedPhone,
       password: randomPassword,
       options: {
         data: {
           username: username.toLowerCase(),
           display_name: displayName,
-          phone: isEmail ? phone : identifier,
+          phone: formattedPhone,
         },
       },
     });
-    
+
     return { data, error };
   };
 
