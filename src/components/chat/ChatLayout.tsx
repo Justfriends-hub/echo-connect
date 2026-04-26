@@ -16,13 +16,16 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export function ChatLayout() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { chats, reload: reloadChats } = useChats();
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const { messages, loadOlder, hasMore, loadingOlder } = useMessages(activeChat);
   const currentChat = chats.find(c => c.id === activeChat);
-  const { typingUsers, notifyTyping } = useTypingPresence(activeChat, user?.user_metadata?.display_name || user?.email || 'Someone');
+  const { typingUsers, notifyTyping } = useTypingPresence(
+    activeChat,
+    profile?.display_name || user?.user_metadata?.display_name || user?.email || 'Someone'
+  );
   const latestMessageAt = messages[messages.length - 1]?.created_at;
   const { othersLastReadAt } = useReadReceipts(activeChat, user?.id, latestMessageAt);
   const [showNewChat, setShowNewChat] = useState(false);

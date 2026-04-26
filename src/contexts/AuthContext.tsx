@@ -103,7 +103,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (data: Partial<UserProfile>) => {
     if (!user) return;
-    await (supabase as any).from('profiles').update(data).eq('id', user.id);
+
+    const metadata: Record<string, any> = {};
+    if (data.display_name !== undefined) metadata.display_name = data.display_name;
+    if (data.username !== undefined) metadata.username = data.username;
+    if (data.phone !== undefined) metadata.phone = data.phone;
+
+    if (Object.keys(metadata).length > 0) {
+      const { error: authError } = await supabase.auth.updateUser({ data: metadata });
+      if (authError) {
+        throw authError;
+      }
+    }
+
+    const { error } = await (supabase as any).from('profiles').update(data).eq('id', user.id);
+    if (error) {
+      throw error;
+    }
+
     setProfile(prev => prev ? { ...prev, ...data } : null);
   };
 

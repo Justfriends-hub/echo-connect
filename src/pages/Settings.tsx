@@ -9,14 +9,25 @@ import { toast } from 'sonner';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
+  const [username, setUsername] = useState(profile?.username || '');
   const [displayName, setDisplayName] = useState(profile?.display_name || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    setUsername(profile?.username || '');
+    setDisplayName(profile?.display_name || '');
+  }, [profile]);
+
   const handleUpdateProfile = async () => {
+    if (!username.trim() || username.length < 3) {
+      toast.error('Username must be at least 3 characters');
+      return;
+    }
+
     if (!displayName.trim()) {
       toast.error('Display name cannot be empty');
       return;
@@ -24,7 +35,10 @@ export default function Settings() {
 
     setLoading(true);
     try {
-      await supabase.auth.updateUser({ data: { display_name: displayName } });
+      await updateProfile({
+        username: username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
+        display_name: displayName.trim(),
+      });
       toast.success('Profile updated');
     } catch (error: any) {
       toast.error(error.message || 'Failed to update profile');
@@ -83,6 +97,16 @@ export default function Settings() {
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
                 placeholder="Your name"
+                className="bg-secondary border-0"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-muted-foreground">Username</label>
+              <Input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                placeholder="username"
                 className="bg-secondary border-0"
               />
             </div>
