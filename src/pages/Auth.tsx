@@ -12,6 +12,7 @@ export default function Auth() {
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
   const navigate = useNavigate();
@@ -69,17 +70,20 @@ export default function Auth() {
     }
 
     setLoading(true);
-    const { error } = await signUp(
+    const result = await signUp(
       identifier,
       username.toLowerCase().replace(/[^a-z0-9_]/g, ''),
       displayName.trim(),
       fullPhone
     );
     setLoading(false);
+    setDebugInfo(result);
 
-    if (error) {
-      setError(error?.message || 'Sign up failed');
+    if (result.error) {
+      console.error('[Auth Debug] signup failed', result.error, result.data);
+      setError(result.error?.message || 'Sign up failed');
     } else {
+      console.debug('[Auth Debug] signup success', result.data);
       navigate('/');
     }
   };
@@ -162,6 +166,12 @@ export default function Auth() {
             <button onClick={() => setStep('identifier')} className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors">
               Use different email/phone
             </button>
+            {import.meta.env.DEV && debugInfo && (
+              <div className="bg-slate-950/90 text-white text-xs p-3 rounded-lg mt-4 overflow-auto max-h-48">
+                <p className="font-medium text-sm text-white mb-2">Debug info</p>
+                <pre className="whitespace-pre-wrap break-words">{JSON.stringify(debugInfo, null, 2)}</pre>
+              </div>
+            )}
           </div>
         )}
       </div>

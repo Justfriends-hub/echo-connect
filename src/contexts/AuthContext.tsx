@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   profile: UserProfile | null;
   loading: boolean;
-  signUp: (identifier: string, username: string, displayName: string, phone: string) => Promise<{ error: any }>;
+  signUp: (identifier: string, username: string, displayName: string, phone: string) => Promise<{ data: any; error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
 }
@@ -24,6 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (import.meta.env.DEV) {
+          console.debug('[Auth Debug] onAuthStateChange', _event, session);
+        }
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -57,33 +60,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isEmail = identifier.includes('@');
     const randomPassword = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const formattedPhone = identifier.startsWith('+') ? identifier : `+234${identifier.replace(/\D/g, '')}`;
-
-    if (isEmail) {
-      const { data, error } = await supabase.auth.signUp({
-        email: identifier,
-        password: randomPassword,
-        options: {
-          data: {
-            username: username.toLowerCase(),
-            display_name: displayName,
-            phone,
+    const payload = isEmail
+      ? {
+          email: identifier,
+          password: randomPassword,
+          options: {
+            data: {
+              username: username.toLowerCase(),
+              display_name: displayName,
+              phone,
+            },
           },
-        },
-      });
-      return { data, error };
+        }
+      : {
+          phone: formattedPhone,
+          password: randomPassword,
+          options: {
+            data: {
+              username: username.toLowerCase(),
+              display_name: displayName,
+              phone: formattedPhone,
+            },
+          },
+        };
+
+    if (import.meta.env.DEV) {
+      console.debug('[Auth Debug] signUp payload', payload);
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      phone: formattedPhone,
-      password: randomPassword,
-      options: {
-        data: {
-          username: username.toLowerCase(),
-          display_name: displayName,
-          phone: formattedPhone,
-        },
-      },
-    });
+    const { data, error } = await supabase.auth.signUp(payload as any);
+
+    if (import.meta.env.DEV) {
+      console.debug('[Auth Debug] signUp response', { data, error });
+    }
 
     return { data, error };
   };
