@@ -16,7 +16,10 @@ export default function Auth() {
   const { signInWithIdentifier, verifyOtp, updateProfile } = useAuth();
   const navigate = useNavigate();
 
-  const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  const validateEmail = (value: string) => {
+    const trimmed = value.trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+  };
 
   const handleSendOtp = async () => {
     setError('');
