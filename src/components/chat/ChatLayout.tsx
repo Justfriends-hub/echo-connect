@@ -58,7 +58,7 @@ export function ChatLayout() {
   const showChat = !isMobile || !!activeChat;
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="fixed inset-0 flex overflow-hidden">
       {showSidebar && (
         <div className={cn("h-full flex-shrink-0 relative", isMobile ? "w-full" : "w-[320px] lg:w-[380px]")}>
           <ChatSidebar
