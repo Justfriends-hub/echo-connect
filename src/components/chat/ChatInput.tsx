@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Smile, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
@@ -16,7 +15,6 @@ interface ChatInputProps {
 export function ChatInput({ onSend, onTyping, onFocus, disabled, placeholder = 'Message', floating = true }: ChatInputProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const updateInputHeightVariable = () => {
@@ -39,40 +37,8 @@ export function ChatInput({ onSend, onTyping, onFocus, disabled, placeholder = '
 
   useEffect(() => {
     if (!floating) return;
-
-    const update = () => {
-      if (typeof window === 'undefined') return;
-      const vv = (window as any).visualViewport;
-      if (vv) {
-        const offset = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
-        setKeyboardOffset(offset);
-      } else {
-        setKeyboardOffset(0);
-      }
-      updateInputHeightVariable();
-    };
-
-    update();
-
-    const vv = (window as any).visualViewport;
-    if (vv) {
-      vv.addEventListener('resize', update);
-      vv.addEventListener('scroll', update);
-    } else {
-      window.addEventListener('resize', update);
-    }
-    window.addEventListener('orientationchange', update);
-
-    return () => {
-      if (vv) {
-        vv.removeEventListener('resize', update);
-        vv.removeEventListener('scroll', update);
-      } else {
-        window.removeEventListener('resize', update);
-      }
-      window.removeEventListener('orientationchange', update);
-    };
-  }, [floating]);
+    updateInputHeightVariable();
+  }, [floating, text]);
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -98,11 +64,11 @@ export function ChatInput({ onSend, onTyping, onFocus, disabled, placeholder = '
 
   const floatingStyle: React.CSSProperties | undefined = floating
     ? {
-        position: 'fixed',
+        position: 'absolute',
         left: 0,
         right: 0,
-        bottom: `calc(${keyboardOffset}px + env(safe-area-inset-bottom))`,
-        zIndex: 9999,
+        bottom: 0,
+        zIndex: 10,
       }
     : undefined;
 
@@ -152,10 +118,6 @@ export function ChatInput({ onSend, onTyping, onFocus, disabled, placeholder = '
       )}
     </div>
   );
-
-  if (floating && typeof document !== 'undefined') {
-    return createPortal(inner, document.body);
-  }
 
   return inner;
 }
