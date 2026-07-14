@@ -84,7 +84,12 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} onScroll={handleScroll} className="flex-1 px-3 py-2 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 px-3 py-2 overflow-y-auto"
+        style={{ paddingBottom: 'calc(var(--chat-input-height, 0px) + env(safe-area-inset-bottom))' }}
+      >
         <div className="max-w-3xl mx-auto space-y-0.5">
           {hasMore && (
             <div className="flex justify-center py-2">

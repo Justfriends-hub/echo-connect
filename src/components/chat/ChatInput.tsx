@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Smile, Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 interface ChatInputProps {
@@ -15,6 +16,7 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -38,6 +40,13 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
     update();
     const vv = (window as any).visualViewport;
     if (vv) {
+      // update container height css variable so chat area can add padding
+      if (containerRef.current) {
+        const h = containerRef.current.offsetHeight || 0;
+        try {
+          document.documentElement.style.setProperty('--chat-input-height', `${h}px`);
+        } catch (e) {}
+      }
       vv.addEventListener('resize', update);
       vv.addEventListener('scroll', update);
     } else {
@@ -91,8 +100,8 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
     <div style={floatingStyle} className="flex items-end gap-2 p-3 bg-chat-input-bg border-t border-border">
       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground flex-shrink-0 mb-0.5">
         <Paperclip className="w-5 h-5" />
-      </Button>
-      <div className="flex-1 relative">
+  const inner = (
+    <div ref={containerRef} style={floatingStyle} className="flex items-end gap-2 p-3 bg-chat-input-bg border-t border-border">
         <textarea
           ref={textareaRef}
           value={text}
