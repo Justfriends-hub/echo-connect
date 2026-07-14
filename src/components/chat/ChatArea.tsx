@@ -48,7 +48,7 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
   const isGroup = chat.type === 'group' || chat.type === 'channel';
 
   return (
-    <div className="flex flex-col h-full chat-bg">
+    <div className="relative flex flex-col h-full chat-bg">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2.5 bg-card border-b border-border">
         <Button variant="ghost" size="icon" className="md:hidden text-foreground" onClick={onBack}>
@@ -133,8 +133,10 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
         </div>
       </div>
 
-      {/* Input */}
-      <ChatInput onSend={onSendMessage} onTyping={onTyping} />
+      {/* Input - overlay so it doesn't push message list when keyboard opens */}
+      <div className="absolute inset-x-0 bottom-0 z-20">
+        <ChatInput onSend={onSendMessage} onTyping={onTyping} />
+      </div>
     </div>
   );
 }
