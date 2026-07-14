@@ -72,9 +72,9 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
   const isGroup = chat.type === 'group' || chat.type === 'channel';
 
   return (
-    <div className="relative flex flex-col h-full chat-bg">
+    <div className="relative flex flex-col h-full chat-bg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-card border-b border-border">
+      <div className="sticky top-0 z-20 flex items-center gap-3 px-4 py-2.5 bg-card border-b border-border">
         <Button variant="ghost" size="icon" className="md:hidden text-foreground" onClick={onBack}>
           <ArrowLeft className="w-5 h-5" />
         </Button>
@@ -111,7 +111,7 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 px-3 py-2 overflow-y-auto"
+        className="flex-1 min-h-0 px-3 py-2 overflow-y-auto"
         style={{ paddingBottom: 'calc(var(--chat-input-height, 0px) + env(safe-area-inset-bottom))' }}
       >
         <div className="max-w-3xl mx-auto space-y-0.5">
