@@ -12,21 +12,33 @@ interface ChatInputProps {
   floating?: boolean;
 }
 
-export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message", floating = true }: ChatInputProps) {
+export function ChatInput({ onSend, onTyping, disabled, placeholder = 'Message', floating = true }: ChatInputProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
   const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const updateInputHeightVariable = () => {
+    if (!floating || !containerRef.current) return;
+    const h = containerRef.current.offsetHeight || 0;
+    try {
+      document.documentElement.style.setProperty('--chat-input-height', `${h}px`);
+    } catch (e) {
+      // ignore server-side or unavailable document
+    }
+  };
 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
-  }, [text]);
+    updateInputHeightVariable();
+  }, [text, floating]);
 
   useEffect(() => {
     if (!floating) return;
+
     const update = () => {
       if (typeof window === 'undefined') return;
       const vv = (window as any).visualViewport;
@@ -36,23 +48,20 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
       } else {
         setKeyboardOffset(0);
       }
+      updateInputHeightVariable();
     };
+
     update();
+
     const vv = (window as any).visualViewport;
     if (vv) {
-      // update container height css variable so chat area can add padding
-      if (containerRef.current) {
-        const h = containerRef.current.offsetHeight || 0;
-        try {
-          document.documentElement.style.setProperty('--chat-input-height', `${h}px`);
-        } catch (e) {}
-      }
       vv.addEventListener('resize', update);
       vv.addEventListener('scroll', update);
     } else {
       window.addEventListener('resize', update);
     }
     window.addEventListener('orientationchange', update);
+
     return () => {
       if (vv) {
         vv.removeEventListener('resize', update);
@@ -96,12 +105,12 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
       }
     : undefined;
 
-  return (
-    <div style={floatingStyle} className="flex items-end gap-2 p-3 bg-chat-input-bg border-t border-border">
-      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground flex-shrink-0 mb-0.5">
-        <Paperclip className="w-5 h-5" />
   const inner = (
     <div ref={containerRef} style={floatingStyle} className="flex items-end gap-2 p-3 bg-chat-input-bg border-t border-border">
+      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground flex-shrink-0 mb-0.5">
+        <Paperclip className="w-5 h-5" />
+      </Button>
+      <div className="flex-1 relative">
         <textarea
           ref={textareaRef}
           value={text}
@@ -112,9 +121,9 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
           rows={1}
           disabled={disabled}
           className={cn(
-            "w-full resize-none bg-secondary rounded-2xl px-4 py-2.5 text-sm text-foreground",
-            "placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring",
-            "max-h-[120px] transition-colors"
+            'w-full resize-none bg-secondary rounded-2xl px-4 py-2.5 text-sm text-foreground',
+            'placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring',
+            'max-h-[120px] transition-colors'
           )}
         />
         <Button
@@ -141,4 +150,10 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message",
       )}
     </div>
   );
+
+  if (floating && typeof document !== 'undefined') {
+    return createPortal(inner, document.body);
+  }
+
+  return inner;
 }
