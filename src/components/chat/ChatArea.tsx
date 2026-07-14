@@ -133,10 +133,8 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
         </div>
       </div>
 
-      {/* Input - overlay so it doesn't push message list when keyboard opens */}
-      <div className="absolute inset-x-0 bottom-0 z-20">
-        <ChatInput onSend={onSendMessage} onTyping={onTyping} />
-      </div>
+      {/* Input (floating) - ChatInput handles its own fixed positioning */}
+      <ChatInput onSend={onSendMessage} onTyping={onTyping} />
     </div>
   );
 }

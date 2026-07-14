@@ -8,11 +8,13 @@ interface ChatInputProps {
   onTyping?: () => void;
   disabled?: boolean;
   placeholder?: string;
+  floating?: boolean;
 }
 
-export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message" }: ChatInputProps) {
+export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message", floating = true }: ChatInputProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -20,6 +22,38 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message" 
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
     }
   }, [text]);
+
+  useEffect(() => {
+    if (!floating) return;
+    const update = () => {
+      if (typeof window === 'undefined') return;
+      const vv = (window as any).visualViewport;
+      if (vv) {
+        const offset = Math.max(0, window.innerHeight - vv.height - (vv.offsetTop || 0));
+        setKeyboardOffset(offset);
+      } else {
+        setKeyboardOffset(0);
+      }
+    };
+    update();
+    const vv = (window as any).visualViewport;
+    if (vv) {
+      vv.addEventListener('resize', update);
+      vv.addEventListener('scroll', update);
+    } else {
+      window.addEventListener('resize', update);
+    }
+    window.addEventListener('orientationchange', update);
+    return () => {
+      if (vv) {
+        vv.removeEventListener('resize', update);
+        vv.removeEventListener('scroll', update);
+      } else {
+        window.removeEventListener('resize', update);
+      }
+      window.removeEventListener('orientationchange', update);
+    };
+  }, [floating]);
 
   const handleSend = () => {
     const trimmed = text.trim();
@@ -43,8 +77,18 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = "Message" 
     onTyping?.();
   };
 
+  const floatingStyle: React.CSSProperties | undefined = floating
+    ? {
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: `calc(${keyboardOffset}px + env(safe-area-inset-bottom))`,
+        zIndex: 9999,
+      }
+    : undefined;
+
   return (
-    <div className="flex items-end gap-2 p-3 bg-chat-input-bg border-t border-border">
+    <div style={floatingStyle} className="flex items-end gap-2 p-3 bg-chat-input-bg border-t border-border">
       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground flex-shrink-0 mb-0.5">
         <Paperclip className="w-5 h-5" />
       </Button>
