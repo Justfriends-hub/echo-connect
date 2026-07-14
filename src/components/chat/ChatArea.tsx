@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from 'react';
 import { ArrowLeft, Phone, MoreVertical, Users } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import type { Chat, Message } from '@/types/chat';
@@ -26,16 +25,41 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
   const scrollRef = useRef<HTMLDivElement>(null);
   const prevFirstIdRef = useRef<string | null>(null);
 
+  const scrollToBottom = (behavior: ScrollBehavior = 'auto') => {
+    requestAnimationFrame(() => {
+      bottomRef.current?.scrollIntoView({ behavior });
+    });
+  };
+
   useEffect(() => {
-    // If we prepended older messages, keep scroll position; otherwise scroll to bottom on new ones.
     const first = messages[0]?.id || null;
     if (prevFirstIdRef.current && first !== prevFirstIdRef.current) {
       // older messages were prepended — don't auto-scroll
     } else {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      scrollToBottom('smooth');
     }
     prevFirstIdRef.current = first;
   }, [messages]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const vv = (window as any).visualViewport;
+    if (!vv) return;
+
+    const handleViewportChange = () => {
+      if (scrollRef.current) {
+        scrollToBottom('auto');
+      }
+    };
+
+    vv.addEventListener('resize', handleViewportChange);
+    vv.addEventListener('scroll', handleViewportChange);
+
+    return () => {
+      vv.removeEventListener('resize', handleViewportChange);
+      vv.removeEventListener('scroll', handleViewportChange);
+    };
+  }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (!onLoadOlder || !hasMore || loadingOlder) return;
@@ -139,7 +163,7 @@ export function ChatArea({ chat, messages, currentUserId, onSendMessage, onBack,
       </div>
 
       {/* Input (floating) - ChatInput handles its own fixed positioning */}
-      <ChatInput onSend={onSendMessage} onTyping={onTyping} />
+      <ChatInput onSend={onSendMessage} onTyping={onTyping} onFocus={() => scrollToBottom('auto')} />
     </div>
   );
 }

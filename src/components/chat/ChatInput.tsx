@@ -7,12 +7,13 @@ import { cn } from '@/lib/utils';
 interface ChatInputProps {
   onSend: (content: string) => void;
   onTyping?: () => void;
+  onFocus?: () => void;
   disabled?: boolean;
   placeholder?: string;
   floating?: boolean;
 }
 
-export function ChatInput({ onSend, onTyping, disabled, placeholder = 'Message', floating = true }: ChatInputProps) {
+export function ChatInput({ onSend, onTyping, onFocus, disabled, placeholder = 'Message', floating = true }: ChatInputProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
@@ -117,6 +118,7 @@ export function ChatInput({ onSend, onTyping, disabled, placeholder = 'Message',
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           onKeyUp={() => onTyping?.()}
+          onFocus={() => onFocus?.()}
           placeholder={placeholder}
           rows={1}
           disabled={disabled}
